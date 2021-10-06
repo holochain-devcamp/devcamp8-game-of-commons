@@ -1,0 +1,9 @@
+---
+manifest_version: "1"
+name: game-of-commons
+uuid: 00000000-0000-0000-0000-000000000000
+properties: ~
+zomes: 
+  - name: game_logic
+    bundled: ../../target/wasm32-unknown-unknown/release/game_logic.wasm
+

@@ -1,0 +1,17 @@
+---
+manifest_version: "1"
+name: game-of-commons
+description: ~
+slots:
+
+  - id: game-of-commons
+    provisioning:
+      strategy: create
+      deferred: false
+    dna:
+      bundled: "../dna/workdir/game-of-commons.dna"
+      properties: ~
+      uuid: ~
+      version: ~
+      clone_limit: 0
+
