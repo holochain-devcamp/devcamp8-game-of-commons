@@ -51,12 +51,12 @@ pub fn create_and_hash_entry_player_profile(nickname: String) -> ExternResult<En
         // Beware: this is bad design for real apps, because:
         // 1/ initial_pubkey is linked to app itself, so no roaming profile
         // 2/ lost if app is reinstalled (= that would be basically a new user)
-        player_id: agent.agent_initial_pubkey, 
+        player_id: agent.agent_initial_pubkey,
         nickname,
     };
     // Commit the Rust struct instance to DHT
     // This is where actual write to DHT happens.
-    // Note: this fn isn't idempotent! If someone would try to commit the 
+    // Note: this fn isn't idempotent! If someone would try to commit the
     // same player_profile multiple times, every time a Header about entry creation
     // would be created. Since the data is the same, it wouldn't affect it
     // and since our app logic doesn't look for these headers, it wouldn't
@@ -101,7 +101,7 @@ pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
     Ok(anchor)
 }
 
-/// Retrieves player profiles that are linked to the anchor for the provided 
+/// Retrieves player profiles that are linked to the anchor for the provided
 /// short_unique_code.
 pub fn get_player_profiles_for_game_code(
     short_unique_code: String,
