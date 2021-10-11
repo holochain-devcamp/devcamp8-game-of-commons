@@ -77,5 +77,10 @@ pub fn get_game_code_anchor(game_code: String) -> ExternResult<EntryHash> {
 
         In the devcamp game we choose option 2: each player creates the anchor.
         */
-    anchor(GAME_CODES_ANCHOR.into(), game_code.clone())
+        let path: Path = (&Anchor {
+            anchor_type: GAME_CODES_ANCHOR.into(),
+            anchor_text: Some(game_code),
+        })
+            .into();
+        path.hash()
 }

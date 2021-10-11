@@ -1,4 +1,4 @@
-use crate::game_code::get_game_code_anchor;
+use crate::game_code::{get_game_code_anchor,create_game_code_anchor};
 use hdk::prelude::*;
 
 pub const PLAYER_LINK_TAG: &str = "PLAYER";
@@ -79,7 +79,7 @@ pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
     // Another example of logs output with a different priority level
     info!("join_game_with_code | input: {:?}", input);
     // Retrieve an anchor for the game code provided in input
-    let anchor = get_game_code_anchor(input.gamecode)?;
+    let anchor = create_game_code_anchor(input.gamecode)?;
     debug!("join_game_with_code | anchor created {:?}", &anchor);
     // Create player's profile. So far it isn't connected to anything,
     // just a combination of nickname & pub key
