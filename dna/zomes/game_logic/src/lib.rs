@@ -1,6 +1,7 @@
 use hdk::prelude::*;
 
 mod game_code;
+mod game_session;
 mod player_profile;
 
 use crate::player_profile::{JoinGameInfo, PlayerProfile};
