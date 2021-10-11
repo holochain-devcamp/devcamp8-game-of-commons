@@ -1,3 +1,4 @@
+use crate::{game_code::get_game_code_anchor, player_profile::get_player_profiles_for_game_code};
 use hdk::prelude::*;
 use std::collections::BTreeMap;
 
@@ -44,6 +45,19 @@ pub struct GameSession {
 
 pub const OWNER_SESSION_TAG: &str = "MY_GAMES";
 pub const GAME_CODE_TO_SESSION_TAG: &str = "GAME_SESSION";
+
+/// Collects input info for the GameSession and calls new_session
+pub fn start_game_session_with_code(game_code: String) -> ExternResult<EntryHash> {
+    let anchor = get_game_code_anchor(game_code.clone())?;
+    let players = get_player_profiles_for_game_code(game_code)?;
+    let game_params = GameParams {
+        regeneration_factor: 1.1,
+        start_amount: 100,
+        num_rounds: 3,
+    };
+    let player_keys: Vec<AgentPubKey> = players.iter().map(|x| x.player_id.clone()).collect();
+    new_session(player_keys, game_params, anchor)
+}
 
 /// Creates new Holochain entry for GameSession
 pub fn new_session(
