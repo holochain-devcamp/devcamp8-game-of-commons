@@ -75,10 +75,48 @@ pub fn create_and_hash_entry_player_profile(nickname: String) -> ExternResult<En
 /// exposed (there's a wrapper for it in lib.rs that is), it's easier for them to have the
 /// same signature. Also it's nice to be able to read about all datatypes that cross the API
 /// as those would need to be defined as structs.
+/// 
+/* 
+When you create an anchor with the function return a EntryHash. Once you
+know the entry_hash of an anchor it is best to use the get_anchor(entry_hash) fn to retrieve
+this anchor, when you need it. In the case of the devcamp game, we have a little problem.
+Players share the game_code via chat or voice or video... That means that the player who
+initiated the game, the game leader, knows the entry_hash of the game code, but players that
+want to join the game do not. Other players need to be able to find the same anchor if they
+want to join the game. Of course the game leader could communicate the entry hash, but that
+is not as convenient as passing the much shorter game code.
+So for other players that do not have the game code the problem exists in finding out the
+entry hash of the anchor while they only have game code.
+
+There are 2 approaches you can take to solve this problem, each with it own benefits.
+1/ Other players can take the game_code and calculate the hash, without actually creating
+    a anchor in the DHT (with the same entry hash, but a different header hash). Like we do
+    in player_profile::get_game_code_anchor
+Benefits: less DHT operations, no extra header in the DHT
+Downside: calculating the entry_hash and fetching the anchor with this hash via 'get_anchor',
+            does not guarantee that anchor will be found at the point in time that you start
+            searching it. Even if you have a entry_hash of entry that absolutely, 100% exists.
+            It does not guarantee it can be found in your part of the DHT, yet. Eventually it
+            will be.The downside is you to need poll until you find the anchor. This how you
+            could calculate a entry hash:
+    let path: Path = (&Anchor {
+            anchor_type: GAME_CODES_ANCHOR.into(),
+            anchor_text: Some(game_code),
+        })
+        .into();
+    let anchor_hash = path.hash()
+2/ The other way is for the other players to create the same anchor. Which we do here by calling
+player_profile::create_game_code_anchor. The anchor entry will be
+created again. It will add a header and a entry to the DHT. But since the entry has the same
+entry_hash it will already be stored.
+Benefit: entry is added to your source chain before being sent to the DHT, so it is
+immediately available. No polling needed
+Downside: More DHT ops, extra header in the DHT
+*/
 pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
     // Another example of logs output with a different priority level
     info!("join_game_with_code | input: {:?}", input);
-    // Retrieve an anchor for the game code provided in input
+    // Create an anchor for the game code provided in input
     let anchor = create_game_code_anchor(input.gamecode)?;
     debug!("join_game_with_code | anchor created {:?}", &anchor);
     // Create player's profile. So far it isn't connected to anything,
