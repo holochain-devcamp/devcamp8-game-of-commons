@@ -41,3 +41,50 @@ pub struct GameSession {
     pub scores: PlayerStats,       // end scores
     pub anchor: EntryHash,         // game code anchor that identifies this game
 }
+
+pub const OWNER_SESSION_TAG: &str = "MY_GAMES";
+pub const GAME_CODE_TO_SESSION_TAG: &str = "GAME_SESSION";
+
+/// Creates new Holochain entry for GameSession
+pub fn new_session(
+    players: Vec<AgentPubKey>,
+    game_params: GameParams,
+    anchor: EntryHash,
+) -> ExternResult<EntryHash> {
+    // Agent who executes this fn is automatically the owner of the game
+    let agent_info_owner = agent_info()?;
+    // Create Rust struct instance to hold data of new game
+    let game_session = GameSession {
+        owner: agent_info_owner.agent_initial_pubkey.clone(),
+        status: SessionState::InProgress,
+        game_params: game_params,
+        players: players.clone(),
+        // there's no score yet, so we just create an empty instance of PlayerStats
+        scores: PlayerStats::new(),
+        anchor: anchor.clone(),
+    };
+    // Create a Holochain entry on DHT
+    create_entry(&game_session)?;
+    // Calculate hash of that entry for further usage
+    let game_session_entry_hash = hash_entry(&game_session)?;
+
+    // Create link from session owner's address to the game session entry
+    // This is to allow owner to query only for their games
+    create_link(
+        agent_info_owner.agent_initial_pubkey.clone().into(),
+        game_session_entry_hash.clone(),
+        LinkTag::new(OWNER_SESSION_TAG),
+    )?;
+
+    // Create link from game code anchor to the game session entry
+    // This is to make game discoverable by everyone who knows the game code anchor
+    create_link(
+        anchor.into(),
+        game_session_entry_hash.clone(),
+        LinkTag::new(GAME_CODE_TO_SESSION_TAG),
+    )?;
+
+    // For now, return the game session entry hash
+    // Once we implement a GameRound, we'll be doing more in this fn
+    Ok(game_session_entry_hash)
+}

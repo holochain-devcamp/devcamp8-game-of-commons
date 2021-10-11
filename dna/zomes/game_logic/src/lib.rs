@@ -1,6 +1,8 @@
 use hdk::prelude::*;
 
 mod game_code;
+// Leave it here until we expose game session fns via the API
+#[allow(dead_code)]
 mod game_session;
 mod player_profile;
 
