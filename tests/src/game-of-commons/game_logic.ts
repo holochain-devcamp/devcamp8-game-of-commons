@@ -61,4 +61,28 @@ export default (orchestrator: Orchestrator<any>) =>
     // Verify that there actually 2 players in the game: no more, no less
     t.ok(list_of_players.length==2);
 
+    //Alice starts a new game (session) with the game code 
+    let session_header_hash = await alice.call(
+      ZOME_NAME,
+      "start_game_session_with_code",
+      GAME_CODE
+    );
+    console.log("Alice created new game session:", session_header_hash);
+    t.ok(session_header_hash);
+
+    let alice_owned_games = await alice.call(
+      ZOME_NAME,
+      "get_my_owned_sessions",
+      null
+    );
+    console.log("Verify that Alice's owned games is 1");
+    t.ok(alice_owned_games.length == 1);
+
+    let bob_owned_games = await bob.call(
+      ZOME_NAME,
+      "get_my_owned_sessions",
+      null
+    );
+    console.log("Verify that Bob's owned games is 0");
+    t.ok(bob_owned_games.length == 0);
 });
