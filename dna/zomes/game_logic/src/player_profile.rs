@@ -115,7 +115,7 @@ Downside: More DHT ops, extra header in the DHT
 */
 pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
     // Another example of logs output with a different priority level
-    info!("join_game_with_code | input: {:?}", input);
+    info!("join_game_with_code | input: {:#?}", input);
     // Create an anchor for the game code provided in input
     let anchor = create_game_code_anchor(input.gamecode)?;
     debug!("join_game_with_code | anchor created {:?}", &anchor);
@@ -149,7 +149,7 @@ pub fn get_player_profiles_for_game_code(
     debug!("anchor: {:?}", anchor);
     // Retrieve a set of links that have anchor as a base, with the tag PLAYER_LINK_TAG
     let links: Links = get_links(anchor, Some(LinkTag::new(String::from(PLAYER_LINK_TAG))))?;
-    debug!("links: {:?}", links);
+    debug!("links: {:#?}", links);
     // The following code isn't idiomatic Rust and could've been written
     // in a much more elegant & short way. But, that woudln't have been easy
     // to read for people unfamiliar with Rust, so here we go.

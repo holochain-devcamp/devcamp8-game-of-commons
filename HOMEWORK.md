@@ -24,3 +24,9 @@ We have covered a lot of topics in the small bits of code that we wrote in this 
 - [Anchors](https://holochain-gym.github.io/developers/intermediate/anchors/)
 
 Don't worry if that looks like a lot: we'll be using the same concepts when developing other parts of the game too, so things would start to make sense as you learn more about their usage.
+
+## Additional homework for session 5
+- In this session you saw how we use source chain queries
+Read more about and try the exercise from [Source-chain](https://holochain-gym.github.io/developers/basic/source-chain/)
+- Enums in Rust are a bit atypical, if you want to learn more about try the rustling exercise for enums: https://github.com/rust-lang/rustlings
+Or watch: https://egghead.io/lessons/rust-rustlings-enums3-working-with-enums-by-pattern-matching-variants
