@@ -1,12 +1,13 @@
 use hdk::prelude::*;
 
 mod game_code;
-// Leave it here until we expose game session fns via the API
-#[allow(dead_code)]
 mod game_session;
 mod player_profile;
 
-use crate::player_profile::{JoinGameInfo, PlayerProfile};
+use crate::{
+    game_session::GameSession,
+    player_profile::{JoinGameInfo, PlayerProfile},
+};
 
 // This is part of Holochain data model definition, and here we specify
 // what kinds of entries are available in our applicaton.
@@ -48,4 +49,16 @@ pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
 #[hdk_extern]
 pub fn get_players_for_game_code(short_unique_code: String) -> ExternResult<Vec<PlayerProfile>> {
     player_profile::get_player_profiles_for_game_code(short_unique_code)
+}
+
+/// Creates a GameSession entry for the corresponding game_code
+#[hdk_extern]
+pub fn start_game_session_with_code(game_code: String) -> ExternResult<EntryHash> {
+    game_session::start_game_session_with_code(game_code)
+}
+
+/// Lists all game sessions created by the agent who calls this fn
+#[hdk_extern]
+pub fn get_my_owned_sessions(_: ()) -> ExternResult<Vec<(EntryHash, GameSession)>> {
+    game_session::get_my_own_sessions_via_source_query()
 }

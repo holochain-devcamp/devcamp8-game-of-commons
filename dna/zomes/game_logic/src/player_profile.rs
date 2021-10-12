@@ -1,4 +1,4 @@
-use crate::game_code::{get_game_code_anchor,create_game_code_anchor};
+use crate::game_code::{create_game_code_anchor, get_game_code_anchor};
 use hdk::prelude::*;
 
 pub const PLAYER_LINK_TAG: &str = "PLAYER";
@@ -75,8 +75,8 @@ pub fn create_and_hash_entry_player_profile(nickname: String) -> ExternResult<En
 /// exposed (there's a wrapper for it in lib.rs that is), it's easier for them to have the
 /// same signature. Also it's nice to be able to read about all datatypes that cross the API
 /// as those would need to be defined as structs.
-/// 
-/* 
+///
+/*
 When you create an anchor with the function return a EntryHash. Once you
 know the entry_hash of an anchor it is best to use the get_anchor(entry_hash) fn to retrieve
 this anchor, when you need it. In the case of the devcamp game, we have a little problem.
