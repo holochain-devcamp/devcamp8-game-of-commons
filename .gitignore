@@ -1,4 +1,5 @@
 /node_modules/
+/ui/dist/
 /dist/
 /target/
 /.cargo/
