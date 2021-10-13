@@ -4,6 +4,7 @@ mod game_code;
 mod game_session;
 mod player_profile;
 mod game_round;
+mod game_move;
 
 use crate::{
     game_session::GameSession,
@@ -24,7 +25,9 @@ entry_defs![
     // GameSession Holochain entry definition callback
     game_session::GameSession::entry_def(),
     // GameRound Holochain entry definition callback
-    game_round::GameRound::entry_def()
+    game_round::GameRound::entry_def(),
+    // GameMove Holochain entry definition callback
+    game_move::GameMove::entry_def()
 ];
 
 /// This is another macro applied to the function that follows, and we need it to
