@@ -72,7 +72,7 @@ pub fn new_session(
         owner: agent_info_owner.agent_initial_pubkey.clone(),
         status: SessionState::InProgress,
         game_params: game_params,
-        players: players.clone(),
+        players: players,
         // there's no score yet, so we just create an empty instance of PlayerStats
         scores: PlayerStats::new(),
         anchor: anchor.clone(),
