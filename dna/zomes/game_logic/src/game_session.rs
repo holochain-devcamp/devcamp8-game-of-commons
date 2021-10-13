@@ -1,4 +1,4 @@
-use crate::{game_code::get_game_code_anchor, player_profile::get_player_profiles_for_game_code};
+use crate::{game_code::get_game_code_anchor, player_profile::get_player_profiles_for_game_code, game_round::GameRound};
 use hdk::prelude::*;
 use std::collections::BTreeMap;
 
@@ -45,6 +45,7 @@ pub struct GameSession {
 
 pub const OWNER_SESSION_TAG: &str = "MY_GAMES";
 pub const GAME_CODE_TO_SESSION_TAG: &str = "GAME_SESSION";
+pub const SESSION_TO_ROUND_TAG: &str = "GAME_ROUND";
 
 /// Collects input info for the GameSession and calls new_session
 pub fn start_game_session_with_code(game_code: String) -> ExternResult<EntryHash> {
@@ -98,9 +99,32 @@ pub fn new_session(
         LinkTag::new(GAME_CODE_TO_SESSION_TAG),
     )?;
 
-    // For now, return the game session entry hash
-    // Once we implement a GameRound, we'll be doing more in this fn
-    Ok(game_session_entry_hash)
+    // Create a round zero: a dummy round we'll need to collect moves
+    let round_zero = GameRound::new(
+        0,
+        game_session_entry_hash.clone(),
+        game_session.game_params.start_amount,
+        0,
+        0,
+            PlayerStats::new()
+    );
+    // Commit round_zero to DHT
+    create_entry(&round_zero)?;
+    // Calculate this entry's hash (nothing is written to DHT)
+    let entry_hash_round_zero = hash_entry(&round_zero)?;
+
+    // Create a link from the game session to the round zero 
+    // to make it discoverable by everyone who knows game code
+    // (So they'll go game_code -> game_session -> round_zero)
+    create_link(
+        game_session_entry_hash.clone(),
+        entry_hash_round_zero.clone(),
+        LinkTag::new(SESSION_TO_ROUND_TAG),
+    )?;
+
+    // Return hash of the round zero because players would need it
+    // to make their moves, and we're saving them a lookup by doing so
+    Ok(entry_hash_round_zero)
 }
 
 /// Queries source chain contents of the agent executing this fn
