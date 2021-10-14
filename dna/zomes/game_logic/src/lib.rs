@@ -1,10 +1,11 @@
+use game_move::GameMoveInput;
 use hdk::prelude::*;
 
 mod game_code;
+mod game_move;
+mod game_round;
 mod game_session;
 mod player_profile;
-mod game_round;
-mod game_move;
 
 use crate::{
     game_session::GameSession,
@@ -67,4 +68,10 @@ pub fn start_game_session_with_code(game_code: String) -> ExternResult<EntryHash
 #[hdk_extern]
 pub fn get_my_owned_sessions(_: ()) -> ExternResult<Vec<(EntryHash, GameSession)>> {
     game_session::get_my_own_sessions_via_source_query()
+}
+
+/// Creates a new move for the given round
+#[hdk_extern]
+pub fn make_new_move(input: GameMoveInput) -> ExternResult<HeaderHash> {
+    game_move::new_move(input.resource_amount, input.round_hash)
 }

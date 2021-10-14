@@ -1,4 +1,7 @@
-use crate::{game_code::get_game_code_anchor, player_profile::get_player_profiles_for_game_code, game_round::GameRound};
+use crate::{
+    game_code::get_game_code_anchor, game_round::GameRound,
+    player_profile::get_player_profiles_for_game_code,
+};
 use hdk::prelude::*;
 use std::collections::BTreeMap;
 
@@ -106,14 +109,14 @@ pub fn new_session(
         game_session.game_params.start_amount,
         0,
         0,
-            PlayerStats::new()
+        PlayerStats::new(),
     );
     // Commit round_zero to DHT
     create_entry(&round_zero)?;
     // Calculate this entry's hash (nothing is written to DHT)
     let entry_hash_round_zero = hash_entry(&round_zero)?;
 
-    // Create a link from the game session to the round zero 
+    // Create a link from the game session to the round zero
     // to make it discoverable by everyone who knows game code
     // (So they'll go game_code -> game_session -> round_zero)
     create_link(
