@@ -17,6 +17,18 @@ pub fn try_get_and_convert<T: TryFrom<Entry>>(
     }
 }
 
+/// Attempts to get an element at the entry_hash and returns it
+/// if the element exists
+pub fn try_get_element(entry_hash: EntryHash, get_options: GetOptions) -> ExternResult<Element> {
+    match get(entry_hash.clone(), get_options)? {
+        Some(element) => Ok(element),
+        None => Err(WasmError::Guest(format!(
+            "There is no element at the hash {}",
+            entry_hash
+        ))),
+    }
+}
+
 /// Tries to extract the entry from the element, and if the entry is there
 /// tries to convert it to type T and return the result
 pub fn try_from_element<T: TryFrom<Entry>>(element: Element) -> ExternResult<T> {

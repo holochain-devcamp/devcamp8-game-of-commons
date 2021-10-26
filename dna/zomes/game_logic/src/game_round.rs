@@ -1,7 +1,7 @@
 use crate::{
-    game_move::GameMove,
-    game_session::{GameParams, PlayerStats, ResourceAmount, GameSession},
-    utils::player_stats_from_moves,
+    game_move::{finalize_moves, get_moves_for_round, GameMove},
+    game_session::{GameParams, GameSession, PlayerStats, ResourceAmount},
+    utils::{player_stats_from_moves, try_from_element, try_get_element},
 };
 use hdk::prelude::*;
 
@@ -28,6 +28,20 @@ pub struct GameRound {
     pub session: EntryHash,
     // state of this round
     pub state: RoundState,
+}
+
+/// Helper struct to package output for the UI
+#[derive(Clone, Debug, Serialize, Deserialize, SerializedBytes)]
+pub struct GameRoundInfo {
+    pub round_num: u32,
+    pub resources_left: Option<ResourceAmount>,
+    pub resources_taken_round: Option<ResourceAmount>,
+    pub resources_grown_round: Option<ResourceAmount>,
+    pub current_round_entry_hash: Option<EntryHash>,
+    pub prev_round_entry_hash: Option<EntryHash>,
+    pub game_session_hash: Option<EntryHash>,
+    pub next_action: String,
+    pub moves: Vec<(ResourceAmount, String, AgentPubKey)>,
 }
 
 // That's a Rust way of providing methods that would be called on specific
@@ -127,4 +141,94 @@ fn create_new_round(
     // calculate the hash of the entry (no DHT writes here)
     let round_entry_hash_update = hash_entry(&next_round)?;
     Ok(round_entry_hash_update)
+}
+
+/// Poll the current DHT state to check if player executing this fn can
+/// close the current round
+pub fn try_to_close_round(last_round_hash: EntryHash) -> ExternResult<GameRoundInfo> {
+    // Retrieve last round element from the DHT and convert it to a Rust struct instance
+    // We would need both the element and the struct instance during this fn
+    let last_round_element = try_get_element(last_round_hash.clone(), GetOptions::latest())?;
+    let last_round: GameRound = try_from_element(last_round_element.clone())?;
+
+    // TODO optimization: check if new round with next round_num already exists
+    // in that case we can skip the rest of this fn, because that means that while
+    // we're executing it someone else already closed the round at last_round_hash
+    // so we can save ourselves the necesity to commit this round update again
+
+    // Retrieve game session element from the DHT and convert it to a Rust struct instance
+    // We would need both the element and the struct instance during this fn
+    let game_session_element = try_get_element(last_round.session.clone(), GetOptions::latest())?;
+    let game_session: GameSession = try_from_element(game_session_element.clone())?;
+
+    // Retrieve game moves from DHT
+    let moves = get_moves_for_round(last_round_hash.clone())?;
+
+    // Try to process those moves and see if we have enough to close the round
+    match finalize_moves(moves, game_session.players.len())? {
+        // we get the moves (which are guaranteed to be unique, hence the name),
+        // so we can close the round
+        Some(unique_moves) => {
+            let mut moves_info: Vec<(ResourceAmount, String, AgentPubKey)> = vec![];
+            for game_move in &unique_moves {
+                moves_info.push((
+                    game_move.resource_amount.clone(),
+                    "playername".into(),
+                    game_move.owner.clone(),
+                ));
+            }
+            info!("all players made their moves: calculating round state");
+            let round_state =
+                calculate_round_state(&last_round, &game_session.game_params, unique_moves);
+            // Check if we can start the next round
+            if can_start_new_round(&game_session, &last_round, &round_state) {
+                let round_hash = create_new_round(
+                    &game_session,
+                    &last_round,
+                    last_round_element.header_address(),
+                    &round_state,
+                )?;
+                return Ok(GameRoundInfo {
+                    current_round_entry_hash: Some(round_hash),
+                    prev_round_entry_hash: Some(last_round_hash),
+                    game_session_hash: None,
+                    resources_left: Some(round_state.resources_left),
+                    resources_taken_round: Some(round_state.resources_taken),
+                    resources_grown_round: Some(round_state.resources_grown),
+                    round_num: last_round.round_num + 1,
+                    next_action: "START_NEXT_ROUND".into(),
+                    moves: moves_info,
+                });
+            } else {
+                // NOTE: we'll be closing the game session here, later in the devcamp
+                // This return is needed here to ensure all if branches of our fn return
+                // the same datatype, otherwise it's quite useless
+                return Ok(GameRoundInfo {
+                    current_round_entry_hash: None,
+                    prev_round_entry_hash: None,
+                    game_session_hash: None,
+                    resources_left: None,
+                    resources_taken_round: None,
+                    resources_grown_round: None,
+                    round_num: last_round.round_num + 1,
+                    next_action: "SHOW_GAME_RESULTS".into(),
+                    moves: vec![],
+                });
+            }
+        }
+        // There aren't enough moves yet, so we get nothing and wait
+        None => {
+            return Ok(GameRoundInfo {
+                current_round_entry_hash: None,
+                prev_round_entry_hash: Some(last_round_hash),
+                game_session_hash: Some(last_round.session.clone()),
+                resources_left: None,
+                resources_taken_round: None,
+                resources_grown_round: None,
+                round_num: last_round.round_num,
+                next_action: "WAITING".into(),
+                moves: vec![],
+            });
+        }
+    };
 }
