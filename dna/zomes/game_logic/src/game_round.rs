@@ -96,3 +96,35 @@ fn can_start_new_round(
     // are resources not depleted?
         && round_state.resources_left > 0
 }
+
+/// Creates a new game round by actually creating the next entry in the update
+/// chain that starts at the round zero we created in game_sessio::new_session
+/// NOTE: we'll use the first parameter of GameSession type later, but we define
+/// it from the beginning to avoid changing fn signature
+fn create_new_round(
+    _: &GameSession,
+    last_round: &GameRound,
+    last_round_header_hash: &HeaderHash,
+    round_state: &RoundState,
+) -> ExternResult<EntryHash> {
+    info!(
+        "create_new_round: updating game round entry at {:?}. Last round num {:?}",
+        last_round, last_round.round_num
+    );
+    // create a Rust struct instance with all the data we need
+    let next_round = GameRound::new(
+        last_round.round_num + 1,
+        last_round.session.clone().into(),
+        round_state.resources_left,
+        round_state.resources_taken,
+        round_state.resources_grown,
+        // making a clone here because GameRound::new would consume player_stats
+        // but we have a shared reference to it which doesn't belong to the current fn
+        round_state.player_stats.clone(),
+    );
+    // commit an update to the DHT
+    update_entry(last_round_header_hash.clone(), &next_round)?;
+    // calculate the hash of the entry (no DHT writes here)
+    let round_entry_hash_update = hash_entry(&next_round)?;
+    Ok(round_entry_hash_update)
+}
