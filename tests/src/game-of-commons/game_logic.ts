@@ -93,10 +93,35 @@ export default (orchestrator: Orchestrator<any>) =>
     console.log("Verify that Bob's owned games is 0");
     t.ok(bob_owned_games.length == 0);
 
-    let new_move = await alice.call(ZOME_NAME, "make_new_move", {
-      resource_amount: 10,
-      round_hash: first_round_entry_hash,
-    });
-    console.log("Verify that Alice's has been able to create a new move");
-    t.ok(new_move);
+    // ROUND 1
+    // Alice makes her move
+    let game_move_round_1_alice = await alice.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 5, round_hash: first_round_entry_hash},
+    );
+    console.log("ROUND 1: Alice made a move: ", game_move_round_1_alice);
+    t.ok(game_move_round_1_alice);
+
+    // Bob makes his move
+    let game_move_round_1_bob = await bob.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 10, round_hash: first_round_entry_hash},
+    );
+    console.log("ROUND 1: Bob made a move: ", game_move_round_1_bob);
+    t.ok(game_move_round_1_bob);
+    
+    // wait for move data to propagate
+    await sleep(2000);
+
+    // Check to close the first round
+    let close_game_round_1_bob = await bob.call(
+      ZOME_NAME,
+      "try_to_close_round",
+      first_round_entry_hash,
+    );
+    console.log("Bob tried to close round 1: ", close_game_round_1_bob);
+    console.log("Verify that first round has ended and next_action == START_NEXT_ROUND:", close_game_round_1_bob.next_action);
+    t.ok(close_game_round_1_bob.next_action == "START_NEXT_ROUND");
   });
