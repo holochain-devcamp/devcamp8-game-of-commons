@@ -2,9 +2,11 @@ use game_move::GameMoveInput;
 use hdk::prelude::*;
 
 mod game_code;
-// NOTE: we'll remove this later once we use get_moves_for_round
+// NOTE: we'll remove this later once we use all fns from this module
 #[allow(dead_code)]
 mod game_move;
+// NOTE: we'll remove this later once we use all fns from this module
+#[allow(dead_code)]
 mod game_round;
 mod game_session;
 mod player_profile;

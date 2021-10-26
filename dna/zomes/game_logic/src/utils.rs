@@ -1,3 +1,4 @@
+use crate::{game_move::GameMove, game_session::PlayerStats};
 use hdk::prelude::*;
 
 /// Tries to do a DHT get to retrieve data for the entry_hash,
@@ -32,4 +33,12 @@ pub fn try_from_element<T: TryFrom<Entry>>(element: Element) -> ExternResult<T> 
             element
         ))),
     }
+}
+
+/// Generates PlayerStats instance with the state from the input game_moves
+pub fn player_stats_from_moves(game_moves: Vec<GameMove>) -> PlayerStats {
+    game_moves
+        .into_iter()
+        .map(|m| (m.owner.clone(), m.resource_amount))
+        .collect::<PlayerStats>()
 }

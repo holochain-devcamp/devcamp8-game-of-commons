@@ -1,5 +1,9 @@
+use crate::{
+    game_move::GameMove,
+    game_session::{GameParams, PlayerStats, ResourceAmount},
+    utils::player_stats_from_moves,
+};
 use hdk::prelude::*;
-use crate::game_session::{ResourceAmount, PlayerStats};
 
 // Having a separate struct for the round state would come in
 // handy later in development
@@ -39,7 +43,7 @@ impl GameRound {
         resources_left: ResourceAmount,
         resources_taken: ResourceAmount,
         resources_grown: ResourceAmount,
-        player_stats: PlayerStats
+        player_stats: PlayerStats,
     ) -> GameRound {
         let state = RoundState {
             resources_left,
@@ -52,5 +56,29 @@ impl GameRound {
             session,
             state,
         }
+    }
+}
+
+/// Calculate state of the round using provided game params and player moves
+/// NOTE: this fn would be used both in validation and when creating game round entries
+/// so it doesn't make any DHT queries and only operates with input data
+fn calculate_round_state(
+    last_round: &GameRound,
+    params: &GameParams,
+    player_moves: Vec<GameMove>,
+) -> RoundState {
+    let consumed_resources_in_round: ResourceAmount =
+        player_moves.iter().map(|x| x.resource_amount).sum();
+    let resources_left = last_round.state.resources_left - consumed_resources_in_round;
+    let total_leftover_resource = (resources_left as f32 * params.regeneration_factor) as i32;
+    let grown_resources_in_round = total_leftover_resource - resources_left;
+
+    let player_stats = player_stats_from_moves(player_moves);
+
+    RoundState {
+        resources_left: total_leftover_resource,
+        resources_taken: consumed_resources_in_round,
+        resources_grown: grown_resources_in_round,
+        player_stats,
     }
 }
