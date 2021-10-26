@@ -1,6 +1,6 @@
 use crate::{
     game_move::GameMove,
-    game_session::{GameParams, PlayerStats, ResourceAmount},
+    game_session::{GameParams, PlayerStats, ResourceAmount, GameSession},
     utils::player_stats_from_moves,
 };
 use hdk::prelude::*;
@@ -81,4 +81,18 @@ fn calculate_round_state(
         resources_grown: grown_resources_in_round,
         player_stats,
     }
+}
+
+/// Checks if we can start a new round given the game session and
+/// it's latest round (which would be previous round in regard to the one
+/// we want to start)
+fn can_start_new_round(
+    game_session: &GameSession,
+    prev_round: &GameRound,
+    round_state: &RoundState,
+) -> bool {
+    // do we have rounds left to play?
+    prev_round.round_num + 1 < game_session.game_params.num_rounds
+    // are resources not depleted?
+        && round_state.resources_left > 0
 }
