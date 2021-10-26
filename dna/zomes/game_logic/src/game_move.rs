@@ -1,4 +1,4 @@
-use crate::game_session::ResourceAmount;
+use crate::{game_session::ResourceAmount, utils::try_get_and_convert};
 use hdk::prelude::*;
 
 pub const GAME_MOVE_LINK_TAG: &str = "GAME_MOVE";
@@ -50,4 +50,18 @@ pub fn new_move(
     )?;
 
     Ok(create_link_header_hash)
+}
+
+/// Get all moves attached to the round that we have so far
+pub fn get_moves_for_round(last_round_hash: EntryHash) -> ExternResult<Vec<GameMove>> {
+    let links = get_links(
+        last_round_hash,
+        Some(LinkTag::new(String::from(GAME_MOVE_LINK_TAG))),
+    )?;
+    let mut moves: Vec<GameMove> = vec![];
+    for link in links.into_inner() {
+        let game_move: GameMove = try_get_and_convert(link.target, GetOptions::latest())?;
+        moves.push(game_move);
+    }
+    Ok(moves)
 }
