@@ -6,6 +6,7 @@ version = "0.0.1"
 [lib]
 crate-type = ["cdylib", "rlib"]
 name = "game_logic"
+doctest = false
 
 [dependencies]
 chrono = {version = "0.4", features = ["serde"]}

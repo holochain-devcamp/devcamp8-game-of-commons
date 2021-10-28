@@ -7,7 +7,7 @@ mod game_session;
 mod player_profile;
 mod utils;
 
-use crate::{
+pub use crate::{
     game_move::GameMoveInput,
     game_round::GameRoundInfo,
     game_session::GameSession,
