@@ -66,16 +66,16 @@ export default (orchestrator: Orchestrator<any>) =>
     t.ok(list_of_players.length == 2);
 
     //Alice starts a new game (session) with the game code
-    let first_round_entry_hash = await alice.call(
+    let zero_round_entry_hash = await alice.call(
       ZOME_NAME,
       "start_game_session_with_code",
       GAME_CODE
     );
     console.log(
-      "Alice created new game session with first round:",
-      first_round_entry_hash
+      "Alice created new game session with round zero:",
+      zero_round_entry_hash
     );
-    t.ok(first_round_entry_hash);
+    t.ok(zero_round_entry_hash);
 
     let alice_owned_games = await alice.call(
       ZOME_NAME,
@@ -98,7 +98,7 @@ export default (orchestrator: Orchestrator<any>) =>
     let game_move_round_1_alice = await alice.call(
       ZOME_NAME,
       "make_new_move",
-      {resource_amount: 5, round_hash: first_round_entry_hash},
+      {resource_amount: 5, round_hash: zero_round_entry_hash},
     );
     console.log("ROUND 1: Alice made a move: ", game_move_round_1_alice);
     t.ok(game_move_round_1_alice);
@@ -107,7 +107,7 @@ export default (orchestrator: Orchestrator<any>) =>
     let game_move_round_1_bob = await bob.call(
       ZOME_NAME,
       "make_new_move",
-      {resource_amount: 10, round_hash: first_round_entry_hash},
+      {resource_amount: 10, round_hash: zero_round_entry_hash},
     );
     console.log("ROUND 1: Bob made a move: ", game_move_round_1_bob);
     t.ok(game_move_round_1_bob);
@@ -119,9 +119,84 @@ export default (orchestrator: Orchestrator<any>) =>
     let close_game_round_1_bob = await bob.call(
       ZOME_NAME,
       "try_to_close_round",
-      first_round_entry_hash,
+      zero_round_entry_hash,
     );
     console.log("Bob tried to close round 1: ", close_game_round_1_bob);
     console.log("Verify that first round has ended and next_action == START_NEXT_ROUND:", close_game_round_1_bob.next_action);
     t.ok(close_game_round_1_bob.next_action == "START_NEXT_ROUND");
+    // save hash of the first round to use when making moves in the next round
+    let first_round_entry_hash = close_game_round_1_bob.current_round_entry_hash;
+
+    // wait for close round data to propagate
+    await sleep(2000);
+
+    // ROUND 2
+    // Bob makes his move
+    let game_move_round_2_bob = await bob.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 10, round_hash: first_round_entry_hash},
+    );
+    console.log("ROUND 2: Bob made a move: ", game_move_round_2_bob);
+    t.ok(game_move_round_2_bob);
+
+    // Alice makes her move
+    let game_move_round_2_alice = await alice.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 6, round_hash: first_round_entry_hash},
+    );
+    console.log("ROUND 2: Alice made a move: ", game_move_round_2_alice);
+    t.ok(game_move_round_2_alice);
+    
+    // wait for move data to propagate
+    await sleep(2000);
+
+    // Check to close the second round
+    let close_game_round_2_bob = await bob.call(
+      ZOME_NAME,
+      "try_to_close_round",
+      first_round_entry_hash,
+    );
+    console.log("Bob tried to close round 2: ", close_game_round_2_bob);
+    console.log("Verify that second round has ended and next_action == START_NEXT_ROUND:", close_game_round_2_bob.next_action);
+    t.ok(close_game_round_2_bob.next_action == "START_NEXT_ROUND");
+    // save hash of the first round to use when making moves in the next round
+    let second_round_entry_hash = close_game_round_2_bob.current_round_entry_hash;
+
+    // wait for close round data to propagate
+    await sleep(2000);
+
+    // ROUND 3
+    // Bob makes his move
+    let game_move_round_3_bob = await bob.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 10, round_hash: second_round_entry_hash},
+    );
+    console.log("ROUND 3: Bob made a move: ", game_move_round_3_bob);
+    t.ok(game_move_round_3_bob);
+
+    // Alice makes her move
+    let game_move_round_3_alice = await alice.call(
+      ZOME_NAME,
+      "make_new_move",
+      {resource_amount: 7, round_hash: second_round_entry_hash},
+    );
+    console.log("ROUND 3: Alice made a move: ", game_move_round_3_alice);
+    t.ok(game_move_round_3_alice);
+    
+    // wait for move data to propagate
+    await sleep(2000);
+
+    // Check to close the first round
+    let close_game_round_3_bob = await bob.call(
+      ZOME_NAME,
+      "try_to_close_round",
+      second_round_entry_hash,
+    );
+    console.log("Bob tried to close round 3: ", close_game_round_3_bob);
+    console.log("Verify that third round has ended and next_action == SHOW_GAME_RESULTS:", close_game_round_3_bob.next_action);
+    t.ok(close_game_round_3_bob.next_action == "SHOW_GAME_RESULTS");
+
   });
