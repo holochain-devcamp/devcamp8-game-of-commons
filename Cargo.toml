@@ -1,6 +1,7 @@
 [workspace]
+resolver = "2"
 members = [
-      "dna/zomes/game_logic",
+  "dna/zomes/game_logic",
 ]
 
 [profile.dev]

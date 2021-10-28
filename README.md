@@ -47,8 +47,16 @@ npm run build:happ
 
 ## Running the DNA tests
 
+With tryorama:
+
 ```bash
 npm run test
+```
+
+With sweettest:
+
+```bash
+npm run sweettest
 ```
 
 ## UI
