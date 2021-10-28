@@ -37,8 +37,6 @@ export default (orchestrator: Orchestrator<any>) =>
     console.log("Alice created the game code: ", codeHash);
     t.ok(codeHash);
 
-    await sleep(50);
-
     // Alice joins the game with this code
     const joinHashAlice = await alice.call(ZOME_NAME, "join_game_with_code", {
       gamecode: GAME_CODE,
@@ -48,13 +46,14 @@ export default (orchestrator: Orchestrator<any>) =>
     t.ok(joinHashAlice);
 
     // Bob joins the game with this code
-    const joinHashBob = await alice.call(ZOME_NAME, "join_game_with_code", {
+    const joinHashBob = await bob.call(ZOME_NAME, "join_game_with_code", {
       gamecode: GAME_CODE,
       nickname: "Bob",
     });
     console.log("Bob joined the game: ", joinHashBob);
     t.ok(joinHashBob);
 
+    await sleep(500);
     let list_of_players = await alice.call(
       ZOME_NAME,
       "get_players_for_game_code",
@@ -95,23 +94,21 @@ export default (orchestrator: Orchestrator<any>) =>
 
     // ROUND 1
     // Alice makes her move
-    let game_move_round_1_alice = await alice.call(
-      ZOME_NAME,
-      "make_new_move",
-      {resource_amount: 5, round_hash: first_round_entry_hash},
-    );
+    let game_move_round_1_alice = await alice.call(ZOME_NAME, "make_new_move", {
+      resource_amount: 5,
+      round_hash: first_round_entry_hash,
+    });
     console.log("ROUND 1: Alice made a move: ", game_move_round_1_alice);
     t.ok(game_move_round_1_alice);
 
     // Bob makes his move
-    let game_move_round_1_bob = await bob.call(
-      ZOME_NAME,
-      "make_new_move",
-      {resource_amount: 10, round_hash: first_round_entry_hash},
-    );
+    let game_move_round_1_bob = await bob.call(ZOME_NAME, "make_new_move", {
+      resource_amount: 10,
+      round_hash: first_round_entry_hash,
+    });
     console.log("ROUND 1: Bob made a move: ", game_move_round_1_bob);
     t.ok(game_move_round_1_bob);
-    
+
     // wait for move data to propagate
     await sleep(2000);
 
@@ -119,9 +116,12 @@ export default (orchestrator: Orchestrator<any>) =>
     let close_game_round_1_bob = await bob.call(
       ZOME_NAME,
       "try_to_close_round",
-      first_round_entry_hash,
+      first_round_entry_hash
     );
     console.log("Bob tried to close round 1: ", close_game_round_1_bob);
-    console.log("Verify that first round has ended and next_action == START_NEXT_ROUND:", close_game_round_1_bob.next_action);
+    console.log(
+      "Verify that first round has ended and next_action == START_NEXT_ROUND:",
+      close_game_round_1_bob.next_action
+    );
     t.ok(close_game_round_1_bob.next_action == "START_NEXT_ROUND");
   });
