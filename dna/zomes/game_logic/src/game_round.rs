@@ -1,6 +1,6 @@
 use crate::{
     game_move::{finalize_moves, get_moves_for_round, GameMove},
-    game_session::{GameParams, GameSession, PlayerStats, ResourceAmount},
+    game_session::{end_game, GameParams, GameSession, PlayerStats, ResourceAmount},
     utils::{player_stats_from_moves, try_from_element, try_get_element},
 };
 use hdk::prelude::*;
@@ -200,19 +200,26 @@ pub fn try_to_close_round(last_round_hash: EntryHash) -> ExternResult<GameRoundI
                     moves: moves_info,
                 });
             } else {
-                // NOTE: we'll be closing the game session here, later in the devcamp
-                // This return is needed here to ensure all if branches of our fn return
-                // the same datatype, otherwise it's quite useless
+                let game_session_entry_hash = end_game(
+                    &game_session,
+                    &game_session_element.header_address(),
+                    &last_round,
+                    last_round_element
+                        .header()
+                        .entry_hash()
+                        .expect("Expected to get entry from GameRound element"),
+                    &round_state,
+                )?;
                 return Ok(GameRoundInfo {
                     current_round_entry_hash: None,
-                    prev_round_entry_hash: None,
-                    game_session_hash: None,
-                    resources_left: None,
-                    resources_taken_round: None,
-                    resources_grown_round: None,
+                    prev_round_entry_hash: Some(last_round_hash),
+                    game_session_hash: Some(game_session_entry_hash),
+                    resources_left: Some(round_state.resources_left),
+                    resources_taken_round: Some(round_state.resources_taken),
+                    resources_grown_round: Some(round_state.resources_grown),
                     round_num: last_round.round_num + 1,
                     next_action: "SHOW_GAME_RESULTS".into(),
-                    moves: vec![],
+                    moves: moves_info,
                 });
             }
         }

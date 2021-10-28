@@ -1,5 +1,6 @@
 use crate::{
-    game_code::get_game_code_anchor, game_round::GameRound,
+    game_code::get_game_code_anchor,
+    game_round::{GameRound, RoundState},
     player_profile::get_player_profiles_for_game_code,
 };
 use hdk::prelude::*;
@@ -169,4 +170,61 @@ pub fn get_my_own_sessions_via_source_query() -> ExternResult<Vec<(EntryHash, Ga
         list_of_tuples.push((gs_hash.clone(), gs));
     }
     Ok(list_of_tuples)
+}
+
+/// Ends the game session and updates it's state (finished/lost)
+/// depending on the results of the last round.
+/// NOTE: GameRound param is needed if we want to send a signal that session
+/// has ended, but right now we don't have signals so this param is skipped
+pub fn end_game(
+    game_session: &GameSession,
+    game_session_header_hash: &HeaderHash,
+    _: &GameRound,
+    last_round_entry_hash: &EntryHash,
+    round_state: &RoundState,
+) -> ExternResult<EntryHash> {
+    info!("Ending the game");
+    // If there are no resources, then the game is lost,
+    // otherwise it's finished
+    // NOTE: this is a Rust trick where we define value of the game_status
+    // as a result of executing if and it's branches.
+    let game_status = if round_state.resources_left <= 0 {
+        SessionState::Lost {
+            last_round: last_round_entry_hash.clone(),
+        }
+    } else {
+        SessionState::Finished {
+            last_round: last_round_entry_hash.clone(),
+        }
+    };
+    // Create a Rust struct instance with new data of our game session
+    // Most of the fields come from the original GameSession,
+    // but state and scores are different
+    let game_session_update = GameSession {
+        owner: game_session.owner.clone(),
+        status: game_status,
+        game_params: game_session.game_params.clone(),
+        players: game_session.players.clone(),
+        scores: round_state.player_stats.clone(),
+        anchor: game_session.anchor.clone(),
+    };
+    // Update the original game session entry on DHT with the game_session_update
+    // contents. We're making an update chain from the game_session_header_hash
+    let game_session_header_hash_update =
+        update_entry(game_session_header_hash.clone(), &game_session_update)?;
+    // Calculate the hash of the entry that we just commited
+    // Reminder: update_entry would return us only the header hash,
+    // but we need the entry hash,
+    let game_session_entry_hash_update = hash_entry(&game_session_update)?;
+    debug!(
+        "updated game session header hash: {:?}",
+        game_session_header_hash_update.clone()
+    );
+    debug!(
+        "updated game session entry hash: {:?}",
+        game_session_entry_hash_update.clone()
+    );
+
+    // Return hash of the entry as the ID of the new data we commited to DHT
+    Ok(game_session_entry_hash_update.clone())
 }
