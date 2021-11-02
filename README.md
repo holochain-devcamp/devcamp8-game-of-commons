@@ -4,6 +4,11 @@
 This is the official repository for the [Holochain](https://www.holochain.org/) DevCamp 8 -- a community organized learning event for developers who want to develop on Holochain.
 Here we present a step-by-step Holochain based implementation of the classical economics game [Tragedy of commons](https://en.wikipedia.org/wiki/Tragedy_of_the_commons). The word "tragedy" is removed from the name of our version for a more positive spin :)
 
+
+<p align="center">
+    <img src="entity_tradegy.png" width="750">
+</p>
+
 ## Repo structure
 
 This repo has a branch for every DevCamp session about a specific part of this application. Every branch contains several commits to explain the step-by-step process of development, and the code compiles for every commit (if it doesn't, please open an issue pointing to a commit!).
