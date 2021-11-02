@@ -85,3 +85,24 @@ pub fn make_new_move(input: GameMoveInput) -> ExternResult<HeaderHash> {
 pub fn try_to_close_round(prev_round_hash: EntryHash) -> ExternResult<GameRoundInfo> {
     game_round::try_to_close_round(prev_round_hash.into())
 }
+
+#[hdk_extern]
+pub fn validate_create_entry_game_move(
+    validate_data: ValidateData,
+) -> ExternResult<ValidateCallbackResult> {
+    game_move::validate_create_entry_game_move(validate_data)
+}
+
+#[hdk_extern]
+pub fn validate_update_entry_game_move(
+    validate_data: ValidateData,
+) -> ExternResult<ValidateCallbackResult> {
+    game_move::validate_update_entry_game_move(validate_data)
+}
+
+#[hdk_extern]
+pub fn validate_delete_entry_game_move(
+    validate_data: ValidateData,
+) -> ExternResult<ValidateCallbackResult> {
+    game_move::validate_delete_entry_game_move(validate_data)
+}

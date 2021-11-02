@@ -1,4 +1,8 @@
-use crate::{game_session::ResourceAmount, utils::try_get_and_convert};
+use crate::{
+    game_round::GameRound,
+    game_session::{GameSession, ResourceAmount},
+    utils::{must_get_entry_struct, try_from_element, try_get_and_convert},
+};
 use hdk::prelude::*;
 use std::collections::BTreeMap;
 
@@ -18,9 +22,7 @@ pub struct GameMoveInput {
     pub round_hash: EntryHash,
 }
 
-/**
- * Create a new move entry, and link it from its round
- */
+/// Create a new move entry, and link it from its round
 pub fn new_move(
     resource_amount: ResourceAmount,
     round_hash: EntryHash,
@@ -113,4 +115,43 @@ pub fn finalize_moves(
         }
         Ok(Some(new_moves))
     }
+}
+
+/// Validates creation of GameMove entries
+pub fn validate_create_entry_game_move(data: ValidateData) -> ExternResult<ValidateCallbackResult> {
+    let game_move: GameMove = try_from_element(data.element)?;
+
+    // validate that resources consumed during the move are always positive
+    if game_move.resource_amount <= 0 {
+        return Ok(ValidateCallbackResult::Invalid(format!(
+            "GameMove has to have resources >= 0, but it has {}",
+            game_move.resource_amount
+        )));
+    }
+
+    // now we need to retrieve game session via the round header hash saved
+    // in the game move entry to verify that player is making a move for the
+    // game session they're actually playing
+    let game_round = must_get_entry_struct::<GameRound>(game_move.round_hash)?;
+    let game_session = must_get_entry_struct::<GameSession>(game_round.session)?;
+
+    if !game_session.players.contains(&game_move.owner) {
+        return Ok(ValidateCallbackResult::Invalid(String::from("Can't make a GameMove for this GameSession because move owner isn't in the list of GameSession players")));
+    }
+
+    Ok(ValidateCallbackResult::Valid)
+}
+
+/// Validates update of GameMove entries
+pub fn validate_update_entry_game_move(_: ValidateData) -> ExternResult<ValidateCallbackResult> {
+    Ok(ValidateCallbackResult::Invalid(String::from(
+        "Can't update GameMove entry",
+    )))
+}
+
+/// Validates delete of GameMove entries
+pub fn validate_delete_entry_game_move(_: ValidateData) -> ExternResult<ValidateCallbackResult> {
+    Ok(ValidateCallbackResult::Invalid(String::from(
+        "Can't delete GameMove entry",
+    )))
 }
