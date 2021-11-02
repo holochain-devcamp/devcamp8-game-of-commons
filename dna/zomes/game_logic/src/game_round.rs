@@ -1,7 +1,7 @@
 use crate::{
     game_move::{finalize_moves, get_moves_for_round, GameMove},
     game_session::{end_game, GameParams, GameSession, PlayerStats, ResourceAmount},
-    utils::{player_stats_from_moves, try_from_element, try_get_element},
+    utils::{must_get_entry_struct, player_stats_from_moves, try_from_element, try_get_element},
 };
 use hdk::prelude::*;
 
@@ -238,4 +238,48 @@ pub fn try_to_close_round(last_round_hash: EntryHash) -> ExternResult<GameRoundI
             });
         }
     };
+}
+
+// TODO: as a homework, try to implement validation for creating a game round
+// that would verify that:
+// 1) we can't create a GameRound with number != 0
+// 2) we can't create a GameRound for the GameSession whose SessionState isn't InProgress
+
+pub fn validate_update_entry_game_round(
+    data: ValidateData,
+) -> ExternResult<ValidateCallbackResult> {
+    let game_round: GameRound = data
+        .element
+        .entry()
+        .to_app_option()?
+        .ok_or(WasmError::Guest(
+            "Trying to validate an entry that's not a GameRound".into(),
+        ))?;
+
+    let game_session = must_get_entry_struct::<GameSession>(game_round.session)?;
+    if game_round.round_num > game_session.game_params.num_rounds {
+        return Ok(ValidateCallbackResult::Invalid(format!(
+            "Can't update GameRound number {} because GameSession only has {} rounds",
+            game_round.round_num, game_session.game_params.num_rounds
+        )));
+    }
+
+    let update_header = data.element.header();
+
+    match update_header {
+        Header::Update(update_data) => {
+            let prev_entry =
+                must_get_entry_struct::<GameRound>(update_data.original_entry_address.clone())?;
+            if (prev_entry.round_num + 1) != game_round.round_num {
+                return Ok(ValidateCallbackResult::Invalid(format!("Can't update GameRound entry to have round num {}: previous GameRound has num {}", game_round.round_num, prev_entry.round_num)));
+            }
+        }
+        _ => {
+            return Ok(ValidateCallbackResult::Invalid(String::from(
+                "GameRound's element has the wrong header: expected Update",
+            )));
+        }
+    }
+
+    Ok(ValidateCallbackResult::Valid)
 }

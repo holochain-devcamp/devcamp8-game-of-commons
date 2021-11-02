@@ -87,6 +87,13 @@ pub fn try_to_close_round(prev_round_hash: EntryHash) -> ExternResult<GameRoundI
 }
 
 #[hdk_extern]
+pub fn validate_update_entry_game_round(
+    data: ValidateData,
+) -> ExternResult<ValidateCallbackResult> {
+    game_round::validate_update_entry_game_round(data)
+}
+
+#[hdk_extern]
 pub fn validate_create_entry_game_move(
     validate_data: ValidateData,
 ) -> ExternResult<ValidateCallbackResult> {
