@@ -179,3 +179,5 @@ pub fn get_player_profiles_for_game_code(
     // wrap our vector into ExternResult and return
     Ok(players)
 }
+
+// TODO: add validation for player_profile to forbid nicknames with len == 0
