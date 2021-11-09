@@ -1,4 +1,6 @@
 use hdk::prelude::*;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 mod game_code;
 mod game_move;
@@ -12,6 +14,7 @@ pub use crate::{
     game_move::GameMoveInput,
     game_round::GameRoundInfo,
     game_session::GameSession,
+    game_signals::GameSignal,
     player_profile::{JoinGameInfo, PlayerProfile},
 };
 
@@ -33,6 +36,60 @@ entry_defs![
     // GameMove Holochain entry definition callback
     game_move::GameMove::entry_def()
 ];
+
+#[hdk_extern]
+fn init(_: ()) -> ExternResult<InitCallbackResult> {
+    // ------ first, set up cap grants for signals to work
+    // grant unrestricted access to accept_cap_claim so other agents can send us claims
+    let mut functions: GrantedFunctions = BTreeSet::new();
+    // give unrestricted access to recv_remote_signal, which is needed for sending remote signals
+    functions.insert((zome_info()?.zome_name, "recv_remote_signal".into()));
+
+    // Create the simplest capability grant entry
+    create_cap_grant(CapGrantEntry {
+        tag: "".into(),    // we wouldn't need to use it, so tag can be empty
+        access: ().into(), // empty access converts to unrestricted
+        functions,         // this grant would allow these functions to be called
+    })?;
+
+    // ------ second, set up a tracing config. This isn't related to the signals part in any way:
+    // even more so -- this isn't Holochain specific! Just Rust tracing crate.
+    // Holochain's init fn is basically an entry point into the hApp (which is the role main function
+    // plays in Rust apps), so it's a good place for such setup to be done.
+    let subscriber = FmtSubscriber::builder()
+        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+        // will be written to stdout.
+        .with_max_level(Level::TRACE)
+        // configures formatter with defaults
+        .with_target(false)
+        .without_time()
+        .compact()
+        // completes the builder.
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
+    // init is an important callback for every hApp, and it's return value is
+    // critical for what happens next, so there are multiple different values defined.
+    // If we get to this line, everything is going fine: we can safely pass the
+    // init stage and move on to the next step.
+    Ok(InitCallbackResult::Pass)
+}
+
+/// Function to handle signals we receive from other backend nodes
+/// It's purpose is simple: receive a remote signal and emit a local
+/// signal to the UI so it can react on it
+#[hdk_extern]
+fn recv_remote_signal(signal: ExternIO) -> ExternResult<()> {
+    // Try to decode signal data we received into GameSignal
+    let game_signal_result: Result<GameSignal, SerializedBytesError> = signal.decode();
+    // Handle possible decoding errors
+    match game_signal_result {
+        // No decoding errors, so we emit local signal to the UI
+        Ok(a) => emit_signal(a),
+        // Decoding errors, so we just return an error
+        Err(_) => Err(WasmError::Guest("Remote signal failed".into())),
+    }
+}
 
 /// This is another macro applied to the function that follows, and we need it to
 /// expose this function as part of our backend API
