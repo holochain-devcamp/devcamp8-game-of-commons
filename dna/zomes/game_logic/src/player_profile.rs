@@ -1,4 +1,7 @@
-use crate::game_code::{create_game_code_anchor, get_game_code_anchor};
+use crate::{
+    game_code::{create_game_code_anchor, get_game_code_anchor},
+    game_signals::GameSignal,
+};
 use hdk::prelude::*;
 
 pub const PLAYER_LINK_TAG: &str = "PLAYER";
@@ -116,6 +119,9 @@ Downside: More DHT ops, extra header in the DHT
 pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
     // Another example of logs output with a different priority level
     info!("join_game_with_code | input: {:#?}", input);
+    // input will be partially consumed by create_game_code_anchor below, so we're
+    // making it's full copy in input_for_signal to be used later
+    let input_for_signal = input.clone();
     // Create an anchor for the game code provided in input
     let anchor = create_game_code_anchor(input.gamecode)?;
     debug!("join_game_with_code | anchor created {:?}", &anchor);
@@ -135,8 +141,30 @@ pub fn join_game_with_code(input: JoinGameInfo) -> ExternResult<EntryHash> {
         LinkTag::new(String::from(PLAYER_LINK_TAG)),
     )?;
     debug!("join_game_with_code | link created");
+    send_signal_player_joined(input_for_signal)?;
     // Return entry hash of the anchor wrapped in ExternResult::Ok variant
     Ok(anchor)
+}
+
+/// Sends a signal GameSignal::PlayerJoined that signals others that
+/// new player joined the game
+fn send_signal_player_joined(input: JoinGameInfo) -> ExternResult<()> {
+    // Create a PlayerProfile instance that keeps player's data
+    // in a convenient form
+    let p = PlayerProfile {
+        player_id: agent_info()?.agent_initial_pubkey,
+        nickname: input.nickname,
+    };
+    // Encode player's data into a signal (no actual signals are sent here!)
+    let signal = ExternIO::encode(GameSignal::PlayerJoined(p))?;
+    // Generate list of players who would receive the signal
+    let players = get_player_profiles_for_game_code(input.gamecode)?;
+    // Out of this list, we'll only need pub keys to find those players
+    let player_keys: Vec<AgentPubKey> = players.iter().map(|x| x.player_id.clone()).collect();
+    // Actually send the signal
+    remote_signal(signal, player_keys)?;
+    // Return empty Ok result: if we get to this line, things are working as expected
+    Ok(())
 }
 
 /// Retrieves player profiles that are linked to the anchor for the provided
