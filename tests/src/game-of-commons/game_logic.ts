@@ -18,6 +18,24 @@ export default (orchestrator: Orchestrator<any>) =>
 
     await s.shareAllNodes([alice_player, bob_player]);
 
+    // Example of how to set up a signal handler
+    let signalPromiseAlice = new Promise<void>((resolve) => alice_player.setSignalHandler((signal) => {
+      let payload = signal.data.payload
+      t.ok(payload);
+      console.log("Alice received Signal:", signal.data.payload);
+      // Example of how to unpack the signal payload
+      let round_hash_from_signal = signal.data.payload.signal_payload.round_entry_hash_update;
+      resolve();
+    }));
+
+    // Example of how to set up a signal handler
+    let signalPromiseBob = new Promise<void>((resolve) => bob_player.setSignalHandler((signal) => {
+      let payload = signal.data.payload
+      t.ok(payload);
+      console.log("Bob received Signal:", signal.data.payload);
+      resolve();
+    }));
+
     const alice = alice_happ.cells.find((cell) =>
       cell.cellNick.includes("/game-of-commons.dna")
     ) as Cell;
@@ -78,6 +96,10 @@ export default (orchestrator: Orchestrator<any>) =>
       zero_round_entry_hash
     );
     t.ok(zero_round_entry_hash);
+
+    // Await for our signal handlers so they get executed
+    await signalPromiseAlice;
+    await signalPromiseBob;
 
     let alice_owned_games = await alice.call(
       ZOME_NAME,
