@@ -1,6 +1,7 @@
 use crate::{
     game_code::get_game_code_anchor,
     game_round::{GameRound, RoundState},
+    game_signals::{GameSignal, SignalPayload},
     player_profile::get_player_profiles_for_game_code,
 };
 use hdk::prelude::*;
@@ -77,7 +78,7 @@ pub fn new_session(
         owner: agent_info_owner.agent_initial_pubkey.clone(),
         status: SessionState::InProgress,
         game_params: game_params,
-        players: players,
+        players: players.clone(),
         // there's no score yet, so we just create an empty instance of PlayerStats
         scores: PlayerStats::new(),
         anchor: anchor.clone(),
@@ -126,9 +127,30 @@ pub fn new_session(
         LinkTag::new(SESSION_TO_ROUND_TAG),
     )?;
 
+    // We're sending signal to notify that a new round has started and that
+    // players can make their moves now
+    // WARNING: remote_signal is fire and forget, no error if it fails,
+    // might be a weak point if this were production hApp
+    let signal_payload = SignalPayload {
+        game_session_entry_hash: game_session_entry_hash.into(),
+        round_entry_hash_update: entry_hash_round_zero.clone().into(),
+    };
+
+    let signal = ExternIO::encode(GameSignal::StartGame(signal_payload))?;
+    let other_players = others(players)?;
+    remote_signal(signal, other_players)?;
+
     // Return hash of the round zero because players would need it
     // to make their moves, and we're saving them a lookup by doing so
     Ok(entry_hash_round_zero)
+}
+
+/// Small helper fn to filter out all players who are not the current agent
+/// (the agent who is executing this fn right now)
+fn others(players: Vec<AgentPubKey>) -> Result<Vec<AgentPubKey>, WasmError> {
+    let me = &agent_info()?.agent_initial_pubkey;
+    let others: Vec<AgentPubKey> = players.into_iter().filter(|p| p.ne(me)).collect();
+    Ok(others)
 }
 
 /// Queries source chain contents of the agent executing this fn
@@ -224,6 +246,16 @@ pub fn end_game(
         "updated game session entry hash: {:?}",
         game_session_entry_hash_update.clone()
     );
+
+    // Create a payload for signalling to other players that game has ended
+    let signal_payload = SignalPayload {
+        game_session_entry_hash: game_session_entry_hash_update.clone(),
+        round_entry_hash_update: last_round_entry_hash.clone().into(),
+    };
+    // Encode our payload into a signal (no signals are sent at this point!)
+    let signal = ExternIO::encode(GameSignal::GameOver(signal_payload))?;
+    // Actually send other players a signal that game has ended
+    remote_signal(signal, game_session.players.clone())?;
 
     // Return hash of the entry as the ID of the new data we commited to DHT
     Ok(game_session_entry_hash_update.clone())
