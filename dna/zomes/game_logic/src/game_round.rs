@@ -1,6 +1,7 @@
 use crate::{
     game_move::{finalize_moves, get_moves_for_round, GameMove},
     game_session::{end_game, GameParams, GameSession, PlayerStats, ResourceAmount},
+    game_signals::{GameSignal, SignalPayload},
     utils::{must_get_entry_struct, player_stats_from_moves, try_from_element, try_get_element},
 };
 use hdk::prelude::*;
@@ -113,10 +114,8 @@ fn can_start_new_round(
 
 /// Creates a new game round by actually creating the next entry in the update
 /// chain that starts at the round zero we created in game_sessio::new_session
-/// NOTE: we'll use the first parameter of GameSession type later, but we define
-/// it from the beginning to avoid changing fn signature
 fn create_new_round(
-    _: &GameSession,
+    game_session: &GameSession,
     last_round: &GameRound,
     last_round_header_hash: &HeaderHash,
     round_state: &RoundState,
@@ -140,6 +139,18 @@ fn create_new_round(
     update_entry(last_round_header_hash.clone(), &next_round)?;
     // calculate the hash of the entry (no DHT writes here)
     let round_entry_hash_update = hash_entry(&next_round)?;
+
+    // Create a signal payload to provide game session and round info
+    // in the signal itself
+    let signal_payload = SignalPayload {
+        game_session_entry_hash: last_round.session.clone(),
+        round_entry_hash_update: round_entry_hash_update.clone(),
+    };
+    // Encode our payload as signal instance: no signals are sent on this step!
+    let signal = ExternIO::encode(GameSignal::StartNextRound(signal_payload))?;
+    // Actually send our signal to all the agents who are listed as game session players
+    remote_signal(signal, game_session.players.clone())?;
+
     Ok(round_entry_hash_update)
 }
 
