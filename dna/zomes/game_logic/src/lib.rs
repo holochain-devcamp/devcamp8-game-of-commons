@@ -4,6 +4,7 @@ mod game_code;
 mod game_move;
 mod game_round;
 mod game_session;
+mod game_signals;
 mod player_profile;
 mod utils;
 
