@@ -1,0 +1,7 @@
+---
+manifest_version: "1"
+name: game-of-commons
+ui:
+  bundled: "../ui/dist.zip"
+happ_manifest:
+  bundled: "./game-of-commons.happ"
